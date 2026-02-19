@@ -1,32 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\vicky\\Documents\\Coding\\Testcase\\MSI_1\\IssueTrackerProject\\IssueTrackerProject.csproj": {}
+    "C:\\Users\\BMAX\\Documents\\OJT\\MSI_1\\IssueTrackerProject\\IssueTrackerProject.csproj": {}
   },
   "projects": {
-    "C:\\Users\\vicky\\Documents\\Coding\\Testcase\\MSI_1\\IssueTrackerProject\\IssueTrackerProject.csproj": {
+    "C:\\Users\\BMAX\\Documents\\OJT\\MSI_1\\IssueTrackerProject\\IssueTrackerProject.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\vicky\\Documents\\Coding\\Testcase\\MSI_1\\IssueTrackerProject\\IssueTrackerProject.csproj",
+        "projectUniqueName": "C:\\Users\\BMAX\\Documents\\OJT\\MSI_1\\IssueTrackerProject\\IssueTrackerProject.csproj",
         "projectName": "IssueTrackerProject",
-        "projectPath": "C:\\Users\\vicky\\Documents\\Coding\\Testcase\\MSI_1\\IssueTrackerProject\\IssueTrackerProject.csproj",
-        "packagesPath": "C:\\Users\\vicky\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\vicky\\Documents\\Coding\\Testcase\\MSI_1\\IssueTrackerProject\\obj\\",
+        "projectPath": "C:\\Users\\BMAX\\Documents\\OJT\\MSI_1\\IssueTrackerProject\\IssueTrackerProject.csproj",
+        "packagesPath": "C:\\Users\\BMAX\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\BMAX\\Documents\\OJT\\MSI_1\\IssueTrackerProject\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\vicky\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\BMAX\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -45,7 +38,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -77,6 +70,24 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "version": "[9.0.13, 9.0.13]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -85,7 +96,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.311/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
