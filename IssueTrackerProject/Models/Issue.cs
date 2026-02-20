@@ -6,6 +6,10 @@ namespace IssueTrackerProject.Models
     {
         // Properties
         public int Id { get; set; }
+        
+        public string? ReportedBy { get; set; } // Stores the Email/Username of the QA
+        
+        public string? AssignedTo { get; set; } // Stores the Email/Username of the Dev
 
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

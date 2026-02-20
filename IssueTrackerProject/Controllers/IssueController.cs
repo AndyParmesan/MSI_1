@@ -4,59 +4,79 @@ using IssueTrackerProject.Data;
 using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
 using System.IO;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 
 namespace IssueTrackerProject.Controllers
 {
+    [Authorize] // Locks dashboard to logged-in users
     public class IssueController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        // Constructor: Connects the Controller to your MySQL Database
-        public IssueController(AppDbContext context)
+        public IssueController(AppDbContext context, UserManager<IdentityUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
-        // --- READ: Display all Issues ---
-    public async Task<IActionResult> Index()
-    {
-        var issues = await _context.Issues.ToListAsync();
-
-        // Calculate stats for the summary row
-        ViewBag.TotalIssues = issues.Count;
-        ViewBag.OpenIssues = issues.Count(i => i.Status == "Open");
-        ViewBag.HighPriority = issues.Count(i => i.Priority == "High");
-        ViewBag.ResolvedIssues = issues.Count(i => i.Status == "Resolved");
-
-        return View(issues);
-    }
-
-        // --- CREATE: Add New Issues ---
-        public IActionResult Create()
+        // --- READ: Dashboard & Analytics ---
+        public async Task<IActionResult> Index()
         {
+            var issues = await _context.Issues.ToListAsync();
+
+            // Stats for summary cards and chart
+            ViewBag.TotalIssues = issues.Count;
+            ViewBag.OpenIssues = issues.Count(i => i.Status == "Open");
+            ViewBag.ResolvedIssues = issues.Count(i => i.Status == "Resolved");
+            ViewBag.HighPriority = issues.Count(i => i.Priority == "High");
+            ViewBag.MediumCount = issues.Count(i => i.Priority == "Medium");
+            ViewBag.LowCount = issues.Count(i => i.Priority == "Low");
+
+            return View(issues);
+        }
+
+        // --- CREATE: QA and Admin Only ---
+        [Authorize(Roles = "QA Tester, Admin")]
+        public async Task<IActionResult> Create()
+        {
+            var developers = await _userManager.GetUsersInRoleAsync("Backend Dev");
+            ViewBag.DeveloperList = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(developers, "UserName", "UserName");
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "QA Tester, Admin")]
         public async Task<IActionResult> Create(Issue newIssue)
         {
             if (ModelState.IsValid)
             {
+                newIssue.ReportedBy = User.Identity?.Name; // Auto-track reporter
+                newIssue.CreatedAt = DateTime.Now;
+                newIssue.UpdatedAt = DateTime.Now;
+
                 _context.Add(newIssue);
                 await _context.SaveChangesAsync();
+                TempData["Success"] = "Issue logged successfully!";
                 return RedirectToAction(nameof(Index));
             }
+            // Reload list if validation fails
+            var developers = await _userManager.GetUsersInRoleAsync("Backend Dev");
+            ViewBag.DeveloperList = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(developers, "UserName", "UserName");
             return View(newIssue);
         }
 
-        // --- EDIT: Update Existing Issues ---
+        // --- EDIT: For all authenticated users ---
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
-
             var issue = await _context.Issues.FindAsync(id);
             if (issue == null) return NotFound();
+            
+            var developers = await _userManager.GetUsersInRoleAsync("Backend Dev");
+            ViewBag.DeveloperList = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(developers, "UserName", "UserName");
 
             return View(issue);
         }
@@ -71,8 +91,10 @@ namespace IssueTrackerProject.Controllers
             {
                 try
                 {
+                    issue.UpdatedAt = DateTime.Now;
                     _context.Update(issue);
                     await _context.SaveChangesAsync();
+                    TempData["Success"] = $"Issue #{id} updated!";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -84,21 +106,10 @@ namespace IssueTrackerProject.Controllers
             return View(issue);
         }
 
-        // --- DELETE: Remove Issues ---
-        // GET: Shows a confirmation page (optional but recommended for links)
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null) return NotFound();
-
-            var issue = await _context.Issues.FindAsync(id);
-            if (issue == null) return NotFound();
-
-            return View(issue);
-        }
-
-        // POST: The actual deletion happens here
+        // --- DELETE: Admin Only ---
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var issue = await _context.Issues.FindAsync(id);
@@ -106,77 +117,62 @@ namespace IssueTrackerProject.Controllers
             {
                 _context.Issues.Remove(issue);
                 await _context.SaveChangesAsync();
+                TempData["Success"] = "Issue deleted.";
             }
             return RedirectToAction(nameof(Index));
         }
 
-    [HttpPost]
-public async Task<IActionResult> ImportCSV(IFormFile file)
-{
-    if (file == null || file.Length == 0) return BadRequest("Please upload a valid CSV file.");
-
-    using (var reader = new StreamReader(file.OpenReadStream()))
-    using (var csv = new CsvHelper.CsvReader(reader, System.Globalization.CultureInfo.InvariantCulture))
-    {
-        var records = csv.GetRecords<Issue>().ToList();
-        
-        // Ensure every imported issue gets a timestamp
-        foreach (var issue in records)
+        // --- IMPORT CSV ---
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ImportCSV(IFormFile file)
         {
-            issue.CreatedAt = DateTime.Now;
-            issue.UpdatedAt = DateTime.Now;
-            if (string.IsNullOrEmpty(issue.Status)) issue.Status = "Open";
-            if (string.IsNullOrEmpty(issue.Priority)) issue.Priority = "Medium";
+            if (file == null || file.Length == 0) return RedirectToAction(nameof(Index));
+
+            using (var reader = new StreamReader(file.OpenReadStream()))
+            using (var csv = new CsvHelper.CsvReader(reader, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                var records = csv.GetRecords<Issue>().ToList();
+                foreach (var issue in records)
+                {
+                    issue.CreatedAt = DateTime.Now;
+                    issue.ReportedBy = User.Identity?.Name; // Accountability
+                }
+                _context.Issues.AddRange(records);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "CSV Data Imported!";
+            }
+            return RedirectToAction(nameof(Index));
         }
 
-        _context.Issues.AddRange(records);
-        await _context.SaveChangesAsync();
-    }
-
-    return RedirectToAction(nameof(Index));
-}
-
-    // --- EXPORT: Generate Excel Report ---
-    public IActionResult ExportToExcel()
-    {
-        var issues = _context.Issues.ToList();
-
-        using (var workbook = new XLWorkbook())
-    {
-        var worksheet = workbook.Worksheets.Add("Issues");
-        
-        // Headers - Added Priority to column 5
-        worksheet.Cell(1, 1).Value = "ID";
-        worksheet.Cell(1, 2).Value = "Title";
-        worksheet.Cell(1, 3).Value = "Description";
-        worksheet.Cell(1, 4).Value = "Status";
-        worksheet.Cell(1, 5).Value = "Priority"; // New Header
-        worksheet.Cell(1, 6).Value = "Created At";
-
-        var headerRow = worksheet.Row(1);
-        headerRow.Style.Font.Bold = true;
-
-        // Data Rows
-        for (int i = 0; i < issues.Count; i++)
+        // --- EXPORT EXCEL ---
+        public IActionResult ExportToExcel()
         {
-            worksheet.Cell(i + 2, 1).Value = issues[i].Id;
-            worksheet.Cell(i + 2, 2).Value = issues[i].Title;
-            worksheet.Cell(i + 2, 3).Value = issues[i].Description;
-            worksheet.Cell(i + 2, 4).Value = issues[i].Status;
-            worksheet.Cell(i + 2, 5).Value = issues[i].Priority; // New Data Field
-            worksheet.Cell(i + 2, 6).Value = issues[i].CreatedAt.ToString();
-        }
+            var issues = _context.Issues.ToList();
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Issues Report");
+                worksheet.Cell(1, 1).Value = "ID";
+                worksheet.Cell(1, 2).Value = "Title";
+                worksheet.Cell(1, 3).Value = "Status";
+                worksheet.Cell(1, 4).Value = "Priority";
+                worksheet.Cell(1, 5).Value = "Reported By";
+                worksheet.Cell(1, 6).Value = "Assigned To";
+
+                for (int i = 0; i < issues.Count; i++)
+                {
+                    worksheet.Cell(i + 2, 1).Value = issues[i].Id;
+                    worksheet.Cell(i + 2, 2).Value = issues[i].Title;
+                    worksheet.Cell(i + 2, 3).Value = issues[i].Status;
+                    worksheet.Cell(i + 2, 4).Value = issues[i].Priority;
+                    worksheet.Cell(i + 2, 5).Value = issues[i].ReportedBy;
+                    worksheet.Cell(i + 2, 6).Value = issues[i].AssignedTo;
+                }
                 worksheet.Columns().AdjustToContents();
-
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
-                    var content = stream.ToArray();
-                    return File(
-                        content, 
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                        "IssuesReport.xlsx"
-                    );
+                    return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Report.xlsx");
                 }
             }
         }

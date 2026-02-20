@@ -6,38 +6,67 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    @if (TempData["Success"] != null)
+    {
+        <div id="successToast" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    }
+</div>
+
 <div class="container mt-5">
+    <div class="text-center mb-4">
+        <button class="btn btn-outline-primary shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#chartCollapse">
+            <i class="bi bi-pie-chart-fill me-2"></i> View System Health Analytics
+        </button>
+    </div>
+
+    <div class="collapse" id="chartCollapse">
+        <div class="row mb-4">
+            <div class="col-md-8 mx-auto">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-dark text-white text-center">
+                        <h5 class="mb-0">System Health Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div style="position: relative; height:40vh; width:100%">
+                            <canvas id="combinedChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white shadow-sm border-0">
-                <div class="card-body text-center">
-                    <h6>Total Issues</h6>
-                    <h3>@ViewBag.TotalIssues</h3>
-                </div>
+            <div class="card bg-primary text-white shadow-sm border-0 text-center p-3">
+                <h6>Total Issues</h6>
+                <h3>@ViewBag.TotalIssues</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-danger text-white shadow-sm border-0">
-                <div class="card-body text-center">
-                    <h6>High Priority</h6>
-                    <h3>@ViewBag.HighPriority</h3>
-                </div>
+            <div class="card bg-danger text-white shadow-sm border-0 text-center p-3">
+                <h6>High Priority</h6>
+                <h3>@ViewBag.HighPriority</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white shadow-sm border-0">
-                <div class="card-body text-center">
-                    <h6>Active (Open)</h6>
-                    <h3>@ViewBag.OpenIssues</h3>
-                </div>
+            <div class="card bg-info text-white shadow-sm border-0 text-center p-3">
+                <h6>Active (Open)</h6>
+                <h3>@ViewBag.OpenIssues</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white shadow-sm border-0">
-                <div class="card-body text-center">
-                    <h6>Resolved</h6>
-                    <h3>@ViewBag.ResolvedIssues</h3>
-                </div>
+            <div class="card bg-success text-white shadow-sm border-0 text-center p-3">
+                <h6>Resolved</h6>
+                <h3>@ViewBag.ResolvedIssues</h3>
             </div>
         </div>
     </div>
@@ -47,12 +76,17 @@
             <h4 class="mb-0">Project Issues Dashboard</h4>
             <div class="d-flex align-items-center">
                 <a asp-action="Create" class="btn btn-primary btn-sm px-3">Add New Issue</a>
-                <form asp-action="ImportCSV" method="post" enctype="multipart/form-data" class="ms-2">
-                    <input type="file" name="file" accept=".csv" class="d-none" id="csvUpload" onchange="this.form.submit()" />
-                    <button type="button" class="btn btn-outline-success btn-sm" onclick="document.getElementById('csvUpload').click()">
-                        Upload CSV
-                    </button>
-                </form>
+
+                @if (User.IsInRole("Admin"))
+                {
+                    <form asp-action="ImportCSV" method="post" enctype="multipart/form-data" class="ms-2">
+                        <input type="file" name="file" accept=".csv" class="d-none" id="csvUpload" onchange="this.form.submit()" />
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="document.getElementById('csvUpload').click()">
+                            Upload CSV
+                        </button>
+                    </form>
+                }
+
                 <a asp-action="ExportToExcel" class="btn btn-outline-light btn-sm ms-2">Download Excel</a>
             </div>
         </div>
@@ -98,22 +132,24 @@
                                     else { <span class="badge bg-success">Resolved</span> }
                                 </td>
                                 <td>
-                                    @if (item.Priority == "High") {
-                                        <span class="badge bg-danger">High</span>
-                                    } else if (item.Priority == "Medium") {
-                                        <span class="badge bg-warning text-dark">Medium</span>
-                                    } else {
-                                        <span class="badge bg-info text-dark">Low</span>
-                                    }
+                                    @if (item.Priority == "High") { <span class="badge bg-danger">High</span> }
+                                    else if (item.Priority == "Medium") { <span class="badge bg-warning text-dark">Medium</span> }
+                                    else { <span class="badge bg-info text-dark">Low</span> }
                                 </td>
                                 <td>@item.CreatedAt.ToShortDateString()</td>
                                 <td class="text-end pe-4">
-                                    <button class="btn btn-sm btn-outline-info" 
-                                            onclick="showIssueDetails('@item.Title', '@Html.Raw(JavaScriptEncoder.Default.Encode(item.Description ?? ""))', '@item.Status', '@item.Priority', '@item.CreatedAt.ToShortDateString()')">
+                                    <button class="btn btn-sm btn-info text-white" 
+                                            onclick="showDetails('@JavaScriptEncoder.Default.Encode(item.Title)', '@JavaScriptEncoder.Default.Encode(item.Description ?? "")', '@item.Status', '@item.Priority', '@item.ReportedBy', '@item.AssignedTo')">
                                         Details
                                     </button>
                                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning">Edit</a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger ms-1">Delete</a>
+                                    
+                                    @if (User.IsInRole("Admin")) {
+                                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;" onsubmit="return confirm('Delete this issue?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger ms-1">Delete</button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -124,74 +160,85 @@
     </div>
 </div>
 
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalTitle"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Description:</strong> <span id="modalDescription"></span></p>
+                <p><strong>Status:</strong> <span id="modalStatus" class="badge"></span></p>
+                <p><strong>Priority:</strong> <span id="modalPriority" class="fw-bold"></span></p>
+                <hr />
+                <p><strong>Reported By:</strong> <span id="modalReportedBy"></span></p>
+                <p><strong>Assigned To:</strong> <span id="modalAssignedTo"></span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        function filterTable() {
-    const searchText = document.getElementById('searchInput').value.toLowerCase();
-    const priorityLimit = document.getElementById('priorityFilter').value;
-    const rows = document.querySelectorAll('tbody tr');
-
-    rows.forEach(row => {
-        const title = row.cells[1].innerText.toLowerCase();
-        const priority = row.cells[3].innerText; // The Priority column
-        
-        const matchesSearch = title.includes(searchText);
-        const matchesPriority = priorityLimit === "" || priority === priorityLimit;
-
-        if (matchesSearch && matchesPriority) {
-            row.style.display = "";
-        } else {
-            row.style.display = "none";
-        }
-    });
-}
-        // LIVE FILTER FUNCTION
-        function filterTable() {
-            const searchText = document.getElementById('searchInput').value.toLowerCase();
-            const priorityLimit = document.getElementById('priorityFilter').value;
-            const rows = document.querySelectorAll('tbody tr');
-
-            rows.forEach(row => {
-                const title = row.cells[1].innerText.toLowerCase();
-                const priority = row.cells[3].innerText.trim();
-                
-                const matchesSearch = title.includes(searchText);
-                const matchesPriority = priorityLimit === "" || priority === priorityLimit;
-
-                if (matchesSearch && matchesPriority) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
+        document.addEventListener("DOMContentLoaded", function () {
+            // Chart Initialization
+            var chartInited = false;
+            document.getElementById('chartCollapse').addEventListener('shown.bs.collapse', function () {
+                if (!chartInited) {
+                    var ctx = document.getElementById('combinedChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Resolved', 'Open', 'High', 'Medium', 'Low'],
+                            datasets: [
+                                { data: [0, 0, @ViewBag.HighPriority, @ViewBag.MediumCount, @ViewBag.LowCount], backgroundColor: ['transparent', 'transparent', '#dc3545', '#ffc107', '#0dcaf0'] },
+                                { data: [@ViewBag.ResolvedIssues, @ViewBag.OpenIssues, 0, 0, 0], backgroundColor: ['#198754', '#fd7e14', 'transparent', 'transparent', 'transparent'], weight: 0.5 }
+                            ]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { labels: { filter: (item) => !item.text.includes('transparent') } }
+                            }
+                        }
+                    });
+                    chartInited = true;
                 }
+            });
+
+            // Toast Display
+            var toastEl = document.getElementById('successToast');
+            if (toastEl) new bootstrap.Toast(toastEl).show();
+        });
+
+        function filterTable() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const priority = document.getElementById('priorityFilter').value;
+            document.querySelectorAll('#issueTable tbody tr').forEach(row => {
+                const textMatch = row.cells[1].innerText.toLowerCase().includes(search);
+                const prioMatch = priority === "" || row.cells[3].innerText.trim() === priority;
+                row.style.display = (textMatch && prioMatch) ? "" : "none";
             });
         }
 
-        // MODAL DETAILS FUNCTION
-        function showIssueDetails(title, description, status, priority, date) {
+        function showDetails(title, desc, status, priority, reporter, assigned) {
             document.getElementById('modalTitle').innerText = title;
-            document.getElementById('modalDescription').innerText = description;
-            document.getElementById('modalDate').innerText = date;
+            document.getElementById('modalDescription').innerText = desc || "No description.";
+            document.getElementById('modalReportedBy').innerText = reporter || "System";
+            document.getElementById('modalAssignedTo').innerText = assigned || "Unassigned";
 
             const statusEl = document.getElementById('modalStatus');
-            const priorityEl = document.getElementById('modalPriority');
-
             statusEl.innerText = status;
-            priorityEl.innerText = priority;
+            statusEl.className = "badge " + (status === "Open" ? "bg-info text-dark" : (status === "In Progress" ? "bg-warning text-dark" : "bg-success"));
 
-            statusEl.className = "fw-bold";
-            priorityEl.className = "fw-bold";
+            const prioEl = document.getElementById('modalPriority');
+            prioEl.innerText = priority;
+            prioEl.className = "fw-bold " + (priority === "High" ? "text-danger" : (priority === "Medium" ? "text-warning" : "text-info"));
 
-            if (status === "Open") statusEl.classList.add("text-info");
-            else if (status === "In Progress") statusEl.classList.add("text-warning");
-            else if (status === "Resolved") statusEl.classList.add("text-success");
-
-            if (priority === "High") priorityEl.classList.add("text-danger");
-            else if (priority === "Medium") priorityEl.classList.add("text-warning");
-            else if (priority === "Low") priorityEl.classList.add("text-info");
-
-            var myModal = new bootstrap.Modal(document.getElementById('issueModal'));
-            myModal.show();
+            new bootstrap.Modal(document.getElementById('detailsModal')).show();
         }
     </script>
 }
