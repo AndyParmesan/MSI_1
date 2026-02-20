@@ -1,26 +1,87 @@
 @model IEnumerable<IssueTrackerProject.Models.Issue>
+@using System.Text.Encodings.Web
 
 @{
     ViewData["Title"] = "Issues Dashboard";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+
 <div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h6>Total Issues</h6>
+                    <h3>@ViewBag.TotalIssues</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h6>High Priority</h6>
+                    <h3>@ViewBag.HighPriority</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h6>Active (Open)</h6>
+                    <h3>@ViewBag.OpenIssues</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h6>Resolved</h6>
+                    <h3>@ViewBag.ResolvedIssues</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card shadow-sm border-0">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
             <h4 class="mb-0">Project Issues Dashboard</h4>
-            <div>
+            <div class="d-flex align-items-center">
                 <a asp-action="Create" class="btn btn-primary btn-sm px-3">Add New Issue</a>
+                <form asp-action="ImportCSV" method="post" enctype="multipart/form-data" class="ms-2">
+                    <input type="file" name="file" accept=".csv" class="d-none" id="csvUpload" onchange="this.form.submit()" />
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="document.getElementById('csvUpload').click()">
+                        Upload CSV
+                    </button>
+                </form>
                 <a asp-action="ExportToExcel" class="btn btn-outline-light btn-sm ms-2">Download Excel</a>
             </div>
         </div>
+
+        <div class="p-3 border-bottom bg-light">
+            <div class="row g-2">
+                <div class="col-md-8">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by title..." onkeyup="filterTable()">
+                </div>
+                <div class="col-md-4">
+                    <select id="priorityFilter" class="form-select" onchange="filterTable()">
+                        <option value="">All Priorities</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0" id="issueTable">
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">ID</th>
                             <th>Title</th>
                             <th>Status</th>
+                            <th>Priority</th> 
                             <th>Created</th>
                             <th class="text-end pe-4">Actions</th>
                         </tr>
@@ -36,8 +97,21 @@
                                     else if(item.Status == "In Progress") { <span class="badge bg-warning text-dark">In Progress</span> }
                                     else { <span class="badge bg-success">Resolved</span> }
                                 </td>
+                                <td>
+                                    @if (item.Priority == "High") {
+                                        <span class="badge bg-danger">High</span>
+                                    } else if (item.Priority == "Medium") {
+                                        <span class="badge bg-warning text-dark">Medium</span>
+                                    } else {
+                                        <span class="badge bg-info text-dark">Low</span>
+                                    }
+                                </td>
                                 <td>@item.CreatedAt.ToShortDateString()</td>
                                 <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-info" 
+                                            onclick="showIssueDetails('@item.Title', '@Html.Raw(JavaScriptEncoder.Default.Encode(item.Description ?? ""))', '@item.Status', '@item.Priority', '@item.CreatedAt.ToShortDateString()')">
+                                        Details
+                                    </button>
                                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning">Edit</a>
                                     <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger ms-1">Delete</a>
                                 </td>
@@ -49,3 +123,75 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    
+    <script>
+        function filterTable() {
+    const searchText = document.getElementById('searchInput').value.toLowerCase();
+    const priorityLimit = document.getElementById('priorityFilter').value;
+    const rows = document.querySelectorAll('tbody tr');
+
+    rows.forEach(row => {
+        const title = row.cells[1].innerText.toLowerCase();
+        const priority = row.cells[3].innerText; // The Priority column
+        
+        const matchesSearch = title.includes(searchText);
+        const matchesPriority = priorityLimit === "" || priority === priorityLimit;
+
+        if (matchesSearch && matchesPriority) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+        // LIVE FILTER FUNCTION
+        function filterTable() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const priorityLimit = document.getElementById('priorityFilter').value;
+            const rows = document.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                const title = row.cells[1].innerText.toLowerCase();
+                const priority = row.cells[3].innerText.trim();
+                
+                const matchesSearch = title.includes(searchText);
+                const matchesPriority = priorityLimit === "" || priority === priorityLimit;
+
+                if (matchesSearch && matchesPriority) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+
+        // MODAL DETAILS FUNCTION
+        function showIssueDetails(title, description, status, priority, date) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDescription').innerText = description;
+            document.getElementById('modalDate').innerText = date;
+
+            const statusEl = document.getElementById('modalStatus');
+            const priorityEl = document.getElementById('modalPriority');
+
+            statusEl.innerText = status;
+            priorityEl.innerText = priority;
+
+            statusEl.className = "fw-bold";
+            priorityEl.className = "fw-bold";
+
+            if (status === "Open") statusEl.classList.add("text-info");
+            else if (status === "In Progress") statusEl.classList.add("text-warning");
+            else if (status === "Resolved") statusEl.classList.add("text-success");
+
+            if (priority === "High") priorityEl.classList.add("text-danger");
+            else if (priority === "Medium") priorityEl.classList.add("text-warning");
+            else if (priority === "Low") priorityEl.classList.add("text-info");
+
+            var myModal = new bootstrap.Modal(document.getElementById('issueModal'));
+            myModal.show();
+        }
+    </script>
+}

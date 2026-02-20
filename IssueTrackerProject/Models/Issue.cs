@@ -7,11 +7,14 @@ namespace IssueTrackerProject.Models
         // Properties
         public int Id { get; set; }
 
-        // Adding = string.Empty; fixes the CS8618 warnings
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         
         public string Status { get; set; }
+        
+        // NEW PROPERTY
+        public string Priority { get; set; } 
+
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         
@@ -21,6 +24,9 @@ namespace IssueTrackerProject.Models
             CreatedAt = DateTime.Now;
             UpdatedAt = DateTime.Now;
             Status = "Open";
+            
+            // Default priority for new issues
+            Priority = "Medium"; 
         }
     }
 }

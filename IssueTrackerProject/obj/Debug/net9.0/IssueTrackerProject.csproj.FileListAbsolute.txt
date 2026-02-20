@@ -388,3 +388,4 @@ C:\Users\BMAX\Documents\OJT\MSI_1\IssueTrackerProject\obj\Debug\net9.0\refint\Is
 C:\Users\BMAX\Documents\OJT\MSI_1\IssueTrackerProject\obj\Debug\net9.0\IssueTrackerProject.pdb
 C:\Users\BMAX\Documents\OJT\MSI_1\IssueTrackerProject\obj\Debug\net9.0\IssueTrackerProject.genruntimeconfig.cache
 C:\Users\BMAX\Documents\OJT\MSI_1\IssueTrackerProject\obj\Debug\net9.0\ref\IssueTrackerProject.dll
+C:\Users\BMAX\Documents\OJT\MSI_1\IssueTrackerProject\bin\Debug\net9.0\CsvHelper.dll
